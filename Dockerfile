@@ -4,6 +4,7 @@
 FROM node:20-alpine AS backend-builder
 
 WORKDIR /app/backend
+RUN apk add --no-cache openssl libc6-compat
 
 # Copia apenas os arquivos de dependência primeiro (cache layer)
 COPY backend/package*.json ./
@@ -31,6 +32,7 @@ ENV PGTZ=America/Sao_Paulo
 ENV NODE_ENV=production
 
 WORKDIR /app/backend
+RUN apk add --no-cache openssl libc6-compat
 
 # Copia os arquivos necessários do builder
 COPY --from=backend-builder /app/backend/dist ./dist
