@@ -125,10 +125,12 @@ export class ColetorService {
             dados: dadosJogo,
         });
 
-        // Atualiza o estado em memória
+        // Atualiza o estado em memória (incluindo placar atualizado)
         this.estadoJogos.set(jogoId, {
             ultimo_tempo: tempoAtual,
             ultimo_periodo: decisao.periodo,
+            ultimo_placar_casa: dadosJogo['placar-casa'],
+            ultimo_placar_visitante: dadosJogo['placar-visitante'],
         });
     }
 
@@ -172,7 +174,7 @@ export class ColetorService {
             const ultimoSnapshot = await this.prisma.snapshots.findFirst({
                 where: { jogo_id: jogoId },
                 orderBy: { capturado_em: 'desc' },
-                select: { tempo: true, periodo: true },
+                select: { tempo: true, periodo: true, placar_casa: true, placar_visitante: true },
             });
 
             if (!ultimoSnapshot) return undefined;
@@ -185,6 +187,8 @@ export class ColetorService {
             return {
                 ultimo_tempo: ultimoSnapshot.tempo,
                 ultimo_periodo: ultimoSnapshot.periodo,
+                ultimo_placar_casa: ultimoSnapshot.placar_casa,
+                ultimo_placar_visitante: ultimoSnapshot.placar_visitante,
             };
         } catch (erro) {
             this.logger.warn({ erro, jogo_id: jogoId }, 'Falha ao recuperar estado do banco');
@@ -194,21 +198,31 @@ export class ColetorService {
 
     // Remove do mapa em memória os jogos que não aparecem mais na API (encerrados)
     private async removerJogosEncerrados(idsAtivos: Set<string>): Promise<void> {
-        for (const [jogoId] of this.estadoJogos) {
+        for (const [jogoId, estado] of this.estadoJogos) {
             if (!idsAtivos.has(jogoId)) {
-                // Remove da memória
-                this.estadoJogos.delete(jogoId);
-
-                // Marca como FINALIZADO no banco de dados
+                // Marca como FINALIZADO no banco de dados com o placar final
                 try {
                     await this.prisma.jogos.update({
                         where: { id: jogoId },
-                        data: { status: 'FINALIZADO' }
+                        data: {
+                            status: 'FINALIZADO',
+                            placar_final_casa: estado.ultimo_placar_casa,
+                            placar_final_visitante: estado.ultimo_placar_visitante
+                        }
                     });
-                    this.logger.info({ jogo_id: jogoId }, '🏁 Jogo encerrado — status atualizado para FINALIZADO');
+                    this.logger.info(
+                        {
+                            jogo_id: jogoId,
+                            placar: `${estado.ultimo_placar_casa}x${estado.ultimo_placar_visitante}`
+                        },
+                        '🏁 Jogo encerrado — status e placar final atualizados'
+                    );
                 } catch (erro) {
-                    this.logger.error({ erro, jogo_id: jogoId }, 'Erro ao marcar jogo como FINALIZADO');
+                    this.logger.error({ erro, jogo_id: jogoId }, 'Erro ao finalizar jogo no banco');
                 }
+
+                // Remove da memória somente após atualizar o banco
+                this.estadoJogos.delete(jogoId);
             }
         }
     }

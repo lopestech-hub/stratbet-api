@@ -22,6 +22,10 @@ datasource db {
 model jogos {
   id String @id @default(uuid())
   status String @default("AO_VIVO") // "AO_VIVO", "FINALIZADO", "SUSPENSO"
+  
+  // --- Resultado Final ---
+  placar_final_casa      Int?
+  placar_final_visitante Int?
 
   // --- Dados de Identificação e Links ---
   link_betfair  String? // Link para o mercado na Betfair
