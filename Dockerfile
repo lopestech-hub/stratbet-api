@@ -30,21 +30,24 @@ ENV TZ=America/Sao_Paulo
 ENV PGTZ=America/Sao_Paulo
 ENV NODE_ENV=production
 
-WORKDIR /app
+WORKDIR /app/backend
 
-# Copia o build do backend
+# Copia os arquivos necessários do builder
 COPY --from=backend-builder /app/backend/dist ./dist
 COPY --from=backend-builder /app/backend/package*.json ./
-COPY --from=backend-builder /app/backend/src/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=backend-builder /app/backend/src/prisma/schema.prisma ./src/prisma/schema.prisma
 
-# Instala apenas as dependências de produção para a imagem final
+# Debug: Lista os arquivos para garantir a estrutura correta (visto nos logs de build)
+RUN ls -R dist/
+
+# Instala apenas as dependências de produção
 RUN npm ci --omit=dev
 
-# Copia o Prisma Client gerado (está dentro de node_modules do builder)
+# Copia o Prisma Client gerado
 COPY --from=backend-builder /app/backend/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Porta exposta
 EXPOSE 3000
 
-# Inicia o servidor
-CMD ["node", "dist/main.js"]
+# Inicia o servidor usando o script start:prod (que aponta para node dist/main)
+CMD ["npm", "run", "start:prod"]
