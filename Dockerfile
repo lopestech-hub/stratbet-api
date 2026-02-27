@@ -43,8 +43,9 @@ RUN ls -R dist/
 # Instala apenas as dependências de produção
 RUN npm ci --omit=dev
 
-# Copia o Prisma Client gerado
+# Copia o Prisma Client gerado (incluindo a pasta .prisma que contém a engine e schemas gerados)
 COPY --from=backend-builder /app/backend/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=backend-builder /app/backend/node_modules/.prisma ./node_modules/.prisma
 
 # Porta exposta
 EXPOSE 3000
