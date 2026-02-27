@@ -7,7 +7,9 @@ WORKDIR /app/backend
 
 # Copia apenas os arquivos de dependência primeiro (cache layer)
 COPY backend/package*.json ./
-RUN npm ci
+
+# Forçamos NODE_ENV=development para instalar devDependencies (como @nestjs/cli)
+RUN NODE_ENV=development npm ci
 
 # Copia o restante do backend e builda
 COPY backend/ .
@@ -32,9 +34,14 @@ WORKDIR /app
 
 # Copia o build do backend
 COPY --from=backend-builder /app/backend/dist ./dist
-COPY --from=backend-builder /app/backend/node_modules ./node_modules
 COPY --from=backend-builder /app/backend/package.json ./
 COPY --from=backend-builder /app/backend/src/prisma/schema.prisma ./prisma/schema.prisma
+
+# Instala apenas as dependências de produção para a imagem final
+RUN npm ci --omit=dev
+
+# Copia o Prisma Client gerado (está dentro de node_modules do builder)
+COPY --from=backend-builder /app/backend/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Porta exposta
 EXPOSE 3000
