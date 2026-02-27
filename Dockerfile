@@ -34,7 +34,7 @@ WORKDIR /app
 
 # Copia o build do backend
 COPY --from=backend-builder /app/backend/dist ./dist
-COPY --from=backend-builder /app/backend/package.json ./
+COPY --from=backend-builder /app/backend/package*.json ./
 COPY --from=backend-builder /app/backend/src/prisma/schema.prisma ./prisma/schema.prisma
 
 # Instala apenas as dependências de produção para a imagem final
