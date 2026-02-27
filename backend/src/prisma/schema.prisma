@@ -1,0 +1,314 @@
+// =============================================================
+// Schema Prisma — StratBet API
+// Banco: PostgreSQL | Timezone: America/Sao_Paulo
+// Nomes de tabelas e colunas SEMPRE em Português
+// Valores de odds/percentuais em Decimal (nunca Float)
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================
+// TABELA: jogos
+// Inserida UMA VEZ quando o jogo aparece pela primeira vez.
+// Contém dados estáticos e pré-live do confronto.
+// =============================================================
+model jogos {
+  id String @id @default(uuid())
+
+  // --- Dados de Identificação e Links ---
+  link_betfair  String? // Link para o mercado na Betfair
+  link_superbet String? // Link para o mercado na Superbet
+  link_bet365   String? // Link para o mercado na Bet365
+  liga          String  // Nome da liga/competição
+
+  // --- Times ---
+  time_casa      String // Nome do time mandante
+  time_visitante String // Nome do time visitante
+
+  // --- Placar HT (Half Time - Intervalo) ---
+  placar_ht_casa      Int? // Gols do time casa no HT
+  placar_ht_visitante Int? // Gols do time visitante no HT
+  placar_ht_total     Int? // Total de gols no HT
+
+  // --- Head to Head (H2H) ---
+  h2h_casa      Decimal? @db.Decimal(5, 2) // % vitórias casa no H2H
+  h2h_visitante Decimal? @db.Decimal(5, 2) // % vitórias visitante no H2H
+  h2h_total     Decimal? @db.Decimal(5, 2) // % de jogos com gols no H2H
+
+  // --- Classificação na Liga ---
+  classificacao_casa      Int? // Posição do time da casa na tabela
+  classificacao_visitante Int? // Posição do time visitante na tabela
+  classificacao_total     Int? // Diferença de posição entre os times
+
+  // --- Pontos Por Jogo (PPJ) ---
+  ppj_casa      Decimal? @db.Decimal(4, 2) // PPJ do time da casa
+  ppj_visitante Decimal? @db.Decimal(4, 2) // PPJ do time visitante
+  ppj_total     Decimal? @db.Decimal(4, 2) // PPJ médio dos dois times
+
+  // --- Vitórias (%) ---
+  vitoria_casa      Decimal? @db.Decimal(5, 2) // % de vitórias do time casa
+  vitoria_visitante Decimal? @db.Decimal(5, 2) // % de vitórias do time visitante
+  vitoria_total     Decimal? @db.Decimal(5, 2) // Média de % de vitórias
+
+  // --- Derrotas (%) ---
+  derrota_casa      Decimal? @db.Decimal(5, 2) // % de derrotas do time casa
+  derrota_visitante Decimal? @db.Decimal(5, 2) // % de derrotas do time visitante
+  derrota_total     Decimal? @db.Decimal(5, 2) // Média de % de derrotas
+
+  // --- Média de Gols Marcados ---
+  media_gols_marcados_casa      Decimal? @db.Decimal(4, 2) // Média gols marcados time casa (jogo inteiro)
+  media_gols_marcados_visitante Decimal? @db.Decimal(4, 2) // Média gols marcados time visitante (jogo inteiro)
+  media_gols_marcados_total     Decimal? @db.Decimal(4, 2) // Soma das médias de gols marcados
+
+  // --- Média de Gols Marcados HT ---
+  media_gols_marcados_ht_casa      Decimal? @db.Decimal(4, 2) // Média gols marcados no 1T (casa)
+  media_gols_marcados_ht_visitante Decimal? @db.Decimal(4, 2) // Média gols marcados no 1T (visitante)
+  media_gols_marcados_ht_total     Decimal? @db.Decimal(4, 2) // Soma das médias de gols marcados no 1T
+
+  // --- Média de Gols Sofridos ---
+  media_gols_sofridos_casa      Decimal? @db.Decimal(4, 2) // Média gols sofridos time casa (jogo inteiro)
+  media_gols_sofridos_visitante Decimal? @db.Decimal(4, 2) // Média gols sofridos time visitante (jogo inteiro)
+  media_gols_sofridos_total     Decimal? @db.Decimal(4, 2) // Soma das médias de gols sofridos
+
+  // --- Média de Gols Sofridos HT ---
+  medias_gols_sofridos_ht_casa      Decimal? @db.Decimal(4, 2) // Média gols sofridos no 1T (casa)
+  medias_gols_sofridos_ht_visitante Decimal? @db.Decimal(4, 2) // Média gols sofridos no 1T (visitante)
+  medias_gols_sofridos_ht_total     Decimal? @db.Decimal(4, 2) // Soma das médias de gols sofridos no 1T
+
+  // --- xG Pré-jogo (Expected Goals) ---
+  xg_pre_casa      Decimal? @db.Decimal(4, 2) // xG pré-jogo do time casa
+  xg_pre_visitante Decimal? @db.Decimal(4, 2) // xG pré-jogo do time visitante
+  xg_pre_total     Decimal? @db.Decimal(4, 2) // xG pré-jogo total (soma)
+
+  // --- xGA Pré-jogo (Expected Goals Against) ---
+  xga_pre_casa      Decimal? @db.Decimal(4, 2) // xGA pré-jogo do time casa
+  xga_pre_visitante Decimal? @db.Decimal(4, 2) // xGA pré-jogo do time visitante
+  xga_pre_total     Decimal? @db.Decimal(4, 2) // xGA pré-jogo total (soma)
+
+  // --- Clean Sheet (%) ---
+  clean_sheet_casa      Decimal? @db.Decimal(5, 2) // % clean sheets do time casa
+  clean_sheet_visitante Decimal? @db.Decimal(5, 2) // % clean sheets do time visitante
+  clean_sheet_total     Decimal? @db.Decimal(5, 2) // Média de % clean sheets
+
+  // --- BTTS - Both Teams to Score (%) ---
+  btts_casa      Decimal? @db.Decimal(5, 2) // % de jogos com BTTS quando casa joga em casa
+  btts_visitante Decimal? @db.Decimal(5, 2) // % de jogos com BTTS quando visitante joga fora
+  btts_total     Decimal? @db.Decimal(5, 2) // Média BTTS geral
+
+  // --- Over 0.5 HT (%) ---
+  over_05_ht_casa      Decimal? @db.Decimal(5, 2) // % Over 0.5 HT do time casa
+  over_05_ht_visitante Decimal? @db.Decimal(5, 2) // % Over 0.5 HT do time visitante
+  over_05_ht_total     Decimal? @db.Decimal(5, 2) // Média Over 0.5 HT
+
+  // --- Over 1.5 (%) ---
+  over_15_casa      Decimal? @db.Decimal(5, 2) // % Over 1.5 do time casa
+  over_15_visitante Decimal? @db.Decimal(5, 2) // % Over 1.5 do time visitante
+  over_15_total     Decimal? @db.Decimal(5, 2) // Média Over 1.5
+
+  // --- Over 2.5 (%) ---
+  over_25_casa      Decimal? @db.Decimal(5, 2) // % Over 2.5 do time casa
+  over_25_visitante Decimal? @db.Decimal(5, 2) // % Over 2.5 do time visitante
+  over_25_total     Decimal? @db.Decimal(5, 2) // Média Over 2.5
+
+  // --- Over 0.5 Gols Marcados (%) ---
+  over_05_marcados_casa      Decimal? @db.Decimal(5, 2) // % de jogos onde time casa marcou Over 0.5
+  over_05_marcados_visitante Decimal? @db.Decimal(5, 2) // % de jogos onde time visitante marcou Over 0.5
+  over_05_marcados_total     Decimal? @db.Decimal(5, 2) // Média Over 0.5 marcados
+
+  // --- Over 0.5 Gols Sofridos (%) ---
+  over_05_sofridos_casa      Decimal? @db.Decimal(5, 2) // % de jogos onde time casa sofreu Over 0.5
+  over_05_sofridos_visitante Decimal? @db.Decimal(5, 2) // % de jogos onde time visitante sofreu Over 0.5
+  over_05_sofridos_total     Decimal? @db.Decimal(5, 2) // Média Over 0.5 sofridos
+
+  // --- Médias de Gols Gerais ---
+  media_gols_casa      Decimal? @db.Decimal(4, 2) // Média gols totais do time casa por jogo
+  media_gols_visitante Decimal? @db.Decimal(4, 2) // Média gols totais do time visitante por jogo
+  media_gols_total     Decimal? @db.Decimal(4, 2) // Soma das médias (expectativa total do jogo)
+
+  // --- Médias de Gols HT ---
+  media_gols_ht_casa      Decimal? @db.Decimal(4, 2) // Média gols no 1T do time casa
+  media_gols_ht_visitante Decimal? @db.Decimal(4, 2) // Média gols no 1T do time visitante
+  media_gols_ht_total     Decimal? @db.Decimal(4, 2) // Soma das médias HT
+
+  // --- Gol após 75 minutos (%) ---
+  gol_75_casa      Decimal? @db.Decimal(5, 2) // % de jogos onde time casa marcou após 75'
+  gol_75_visitante Decimal? @db.Decimal(5, 2) // % de jogos onde time visitante marcou após 75'
+  gol_75_total     Decimal? @db.Decimal(5, 2) // Média de gol após 75'
+
+  // --- Odds Pré-Jogo ---
+  odds_casa_pre      Decimal? @db.Decimal(6, 2) // Odd 1 (vitória casa) pré-jogo
+  odds_visitante_pre Decimal? @db.Decimal(6, 2) // Odd 2 (vitória visitante) pré-jogo
+  odds_empate_pre    Decimal? @db.Decimal(6, 2) // Odd X (empate) pré-jogo
+  odds_btts_sim_pre  Decimal? @db.Decimal(6, 2) // Odd BTTS Sim pré-jogo
+  odds_over_05_pre   Decimal? @db.Decimal(6, 2) // Odd Over 0.5 pré-jogo
+  odds_over_15_pre   Decimal? @db.Decimal(6, 2) // Odd Over 1.5 pré-jogo
+  odds_over_25_pre   Decimal? @db.Decimal(6, 2) // Odd Over 2.5 pré-jogo
+  odds_over_35_pre   Decimal? @db.Decimal(6, 2) // Odd Over 3.5 pré-jogo
+  odds_over_05_ht_pre Decimal? @db.Decimal(6, 2) // Odd Over 0.5 HT pré-jogo
+
+  // --- Metadados ---
+  criado_em DateTime @default(now()) // Data/hora de inserção (UTC-3)
+
+  // --- Relacionamentos ---
+  snapshots snapshots[] // Um jogo possui N snapshots ao vivo
+
+  @@map("jogos")
+}
+
+// =============================================================
+// TABELA: snapshots
+// Um registro por minuto por jogo.
+// Contém todos os dados dinâmicos coletados ao vivo.
+// Regra: salvar apenas quando o minuto mudar ou regredir.
+// =============================================================
+model snapshots {
+  id String @id @default(uuid())
+
+  // --- Identificação ---
+  jogo_id String // FK para a tabela jogos
+  periodo Int    // Período detectado automaticamente: 1 = 1T, 2 = 2T
+  tempo   Int    // Minuto atual do jogo (ex: 23, 45, 67)
+
+  // --- Placar Ao Vivo ---
+  placar_casa      Int // Gols do time casa no momento
+  placar_visitante Int // Gols do time visitante no momento
+  placar_total     Int // Total de gols no momento
+
+  // --- xG Ao Vivo (Expected Goals) ---
+  xg_casa      Decimal? @db.Decimal(4, 2) // xG ao vivo do time casa
+  xg_visitante Decimal? @db.Decimal(4, 2) // xG ao vivo do time visitante
+  xg_total     Decimal? @db.Decimal(4, 2) // xG ao vivo total
+
+  // --- PI1/PI2/PI3 (Pressão/Intensidade - acumulado) ---
+  pi1_casa      Decimal? @db.Decimal(6, 2) // PI1 acumulado do time casa
+  pi1_visitante Decimal? @db.Decimal(6, 2) // PI1 acumulado do time visitante
+  pi1_total     Decimal? @db.Decimal(6, 2) // PI1 total
+
+  pi2_casa      Decimal? @db.Decimal(6, 2) // PI2 acumulado do time casa
+  pi2_visitante Decimal? @db.Decimal(6, 2) // PI2 acumulado do time visitante
+  pi2_total     Decimal? @db.Decimal(6, 2) // PI2 total
+
+  pi3_casa      Decimal? @db.Decimal(6, 2) // PI3 acumulado do time casa
+  pi3_visitante Decimal? @db.Decimal(6, 2) // PI3 acumulado do time visitante
+  pi3_total     Decimal? @db.Decimal(6, 2) // PI3 total
+
+  // --- APPM (Ações por Minuto - média geral) ---
+  appm_casa      Decimal? @db.Decimal(5, 2) // APPM do time casa (jogo inteiro)
+  appm_visitante Decimal? @db.Decimal(5, 2) // APPM do time visitante (jogo inteiro)
+  appm_total     Decimal? @db.Decimal(5, 2) // APPM total
+
+  // --- APPM10 (Ações por Minuto - últimos 10 minutos) ---
+  appm10_casa      Decimal? @db.Decimal(5, 2) // APPM dos últimos 10 min do time casa
+  appm10_visitante Decimal? @db.Decimal(5, 2) // APPM dos últimos 10 min do time visitante
+  appm10_total     Decimal? @db.Decimal(5, 2) // APPM10 total
+
+  // --- CG (Chutes a Gol - acumulado) ---
+  cg_casa      Int? // Chutes ao gol acumulados do time casa
+  cg_visitante Int? // Chutes ao gol acumulados do time visitante
+  cg_total     Int? // Total de chutes ao gol
+
+  // --- CG10 (Chutes a Gol - últimos 10 minutos) ---
+  cg10_casa      Int? // Chutes ao gol últimos 10 min do time casa
+  cg10_visitante Int? // Chutes ao gol últimos 10 min do time visitante
+  cg10_total     Int? // Total de chutes ao gol nos últimos 10 min
+
+  // --- Total de Chutes ---
+  total_chutes_casa      Int? // Total de chutes (ao gol + fora + bloqueados) do time casa
+  total_chutes_visitante Int? // Total de chutes do time visitante
+  total_chutes_total     Int? // Total de chutes do jogo
+
+  // --- Chutes ao Gol ---
+  chutes_ao_gol_casa      Int? // Chutes ao gol do time casa
+  chutes_ao_gol_visitante Int? // Chutes ao gol do time visitante
+  chutes_ao_gol_total     Int? // Total de chutes ao gol do jogo
+
+  // --- Chutes Fora ---
+  chutes_fora_casa      Int? // Chutes fora do gol do time casa
+  chutes_fora_visitante Int? // Chutes fora do gol do time visitante
+  chutes_fora_total     Int? // Total de chutes fora do jogo
+
+  // --- Cantos HT (Escanteios no 1T) ---
+  cantos_ht_casa      Int? // Escanteios do time casa no 1T
+  cantos_ht_visitante Int? // Escanteios do time visitante no 1T
+  cantos_ht_total     Int? // Total de escanteios no 1T
+
+  // --- Cantos (Total no Jogo) ---
+  cantos_casa      Int? // Escanteios do time casa no jogo
+  cantos_visitante Int? // Escanteios do time visitante no jogo
+  cantos_total     Int? // Total de escanteios no jogo
+
+  // --- Ataques ---
+  ataques_casa      Int? // Total de ataques do time casa
+  ataques_visitante Int? // Total de ataques do time visitante
+  ataques_total     Int? // Total de ataques do jogo
+
+  // --- Ataques Perigosos ---
+  ataques_perigosos_casa      Int? // Ataques perigosos do time casa
+  ataques_perigosos_visitante Int? // Ataques perigosos do time visitante
+  ataques_perigosos_total     Int? // Total de ataques perigosos do jogo
+
+  // --- Posse de Bola (%) ---
+  posse_casa      Decimal? @db.Decimal(5, 2) // % de posse do time casa
+  posse_visitante Decimal? @db.Decimal(5, 2) // % de posse do time visitante
+  posse_total     Decimal? @db.Decimal(5, 2) // Soma da posse (deve ser ~100)
+
+  // --- Cartões Amarelos ---
+  cartoes_amarelos_casa      Int? // Cartões amarelos do time casa
+  cartoes_amarelos_visitante Int? // Cartões amarelos do time visitante
+  cartoes_amarelos_total     Int? // Total de cartões amarelos
+
+  // --- Cartões Vermelhos ---
+  cartoes_vermelhos_casa      Int? // Cartões vermelhos do time casa
+  cartoes_vermelhos_visitante Int? // Cartões vermelhos do time visitante
+  cartoes_vermelhos_total     Int? // Total de cartões vermelhos
+
+  // --- Último Gol (Minuto) ---
+  ultimo_gol_casa      Int? // Minuto do último gol do time casa
+  ultimo_gol_visitante Int? // Minuto do último gol do time visitante
+  ultimo_gol_total     Int? // Minuto do último gol do jogo (qualquer time)
+
+  // --- Tempo Desde Último Gol ---
+  tempo_desde_ultimo_gol_casa      Int? // Minutos desde o último gol do time casa
+  tempo_desde_ultimo_gol_visitante Int? // Minutos desde o último gol do time visitante
+  tempo_desde_ultimo_gol_total     Int? // Minutos desde o último gol do jogo
+
+  // --- Odds Ao Vivo ---
+  odds_casa_live      Decimal? @db.Decimal(6, 2) // Odd 1 (vitória casa) ao vivo
+  odds_visitante_live Decimal? @db.Decimal(6, 2) // Odd 2 (vitória visitante) ao vivo
+  odds_empate_live    Decimal? @db.Decimal(6, 2) // Odd X (empate) ao vivo
+  odds_btts_sim_live  Decimal? @db.Decimal(6, 2) // Odd BTTS Sim ao vivo
+  odds_over_05_live   Decimal? @db.Decimal(6, 2) // Odd Over 0.5 ao vivo
+  odds_over_15_live   Decimal? @db.Decimal(6, 2) // Odd Over 1.5 ao vivo
+  odds_over_25_live   Decimal? @db.Decimal(6, 2) // Odd Over 2.5 ao vivo
+  odds_over_35_live      Decimal? @db.Decimal(6, 2) // Odd Over 3.5 ao vivo
+  odds_over_05_ht_live  Decimal? @db.Decimal(6, 2) // Odd Over 0.5 HT ao vivo
+
+  // --- CG Gol Marcados (acumulado) ---
+  cg_gol_marcados_casa      Int? // Chutes que resultaram em gol do time casa
+  cg_gol_marcados_visitante Int? // Chutes que resultaram em gol do time visitante
+  cg_gol_marcados_total     Int? // Total de gols marcados a partir de chutes
+
+  // --- Primeiro Gol (%) ---
+  primeiro_gol_casa      Decimal? @db.Decimal(5, 2) // % histórico de marcarem o primeiro gol (casa)
+  primeiro_gol_visitante Decimal? @db.Decimal(5, 2) // % histórico de marcarem o primeiro gol (visitante)
+  primeiro_gol_total     Decimal? @db.Decimal(5, 2) // Média primeiro gol
+
+  // --- Metadados ---
+  capturado_em DateTime @default(now()) // Timestamp de quando o snapshot foi salvo (UTC-3)
+
+  // --- Relacionamento ---
+  jogo jogos @relation(fields: [jogo_id], references: [id])
+
+  // Índices para performance nas queries mais comuns
+  @@index([jogo_id])
+  @@index([jogo_id, periodo, tempo]) // Busca rápida do último estado do jogo
+  @@index([capturado_em])
+  @@map("snapshots")
+}
