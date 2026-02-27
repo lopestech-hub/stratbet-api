@@ -11,7 +11,7 @@ Sistema de coleta automatizada de dados de futebol ao vivo via API externa.
 - Consulta a API a cada **30 segundos**
 - Detecta automaticamente mudanças de minuto e transições de período (1T → 2T)
 - Armazena dados estáticos (pré-jogo) em `jogos` e dados dinâmicos (ao vivo) em `snapshots`
-- Lógica de deduplicação: ignora snapshots com mesmo minuto e período
+- **Lógica de Upsert:** Atualiza o snapshot do minuto atual com os dados mais recentes (Opção 3).
 
 ---
 
@@ -28,9 +28,9 @@ Sistema de coleta automatizada de dados de futebol ao vivo via API externa.
 
 | Condição | Ação |
 |---|---|
-| `tempo_atual > ultimo_tempo` | Minuto novo → **SALVAR** (mesmo período) |
-| `tempo_atual < ultimo_tempo` | Regressão → **SALVAR** (novo período = periodo+1) |
-| `tempo_atual == ultimo_tempo` | Duplicado → **IGNORAR** |
+| `tempo_atual > ultimo_tempo` | Minuto novo → **INSERT** (mesmo período) |
+| `tempo_atual < ultimo_tempo` | Regressão → **INSERT** (novo período = periodo+1) |
+| `tempo_atual == ultimo_tempo` | Mesmo minuto → **UPDATE** (sobrescreve com dados novos) |
 
 ### Estado em Memória
 
@@ -82,8 +82,9 @@ Sistema de coleta automatizada de dados de futebol ao vivo via API externa.
 ```sql
 -- snapshots
 INDEX ON (jogo_id)
-INDEX ON (jogo_id, periodo, tempo)  -- Chave para buscar último estado
+INDEX ON (jogo_id, periodo, tempo)
 INDEX ON (capturado_em)
+UNIQUE (jogo_id, periodo, tempo)  -- Garante upsert por minuto
 ```
 
 ### Schema Prisma
@@ -151,6 +152,8 @@ stratbet-api/
 │   │   ├── app.module.ts            ← Módulo raiz com Config, Schedule, Pino
 │   │   └── main.ts                  ← Bootstrap Fastify + Pino
 │   ├── scripts/                     ← Scripts de migração de banco
+│   │   ├── criar-tabelas.ts         ← Cria estrutura inicial
+│   │   └── add-unique-snapshots.ts   ← Adiciona UNIQUE (jogo_id, periodo, tempo)
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── nest-cli.json

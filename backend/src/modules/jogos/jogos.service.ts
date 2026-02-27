@@ -12,17 +12,17 @@ export class JogosService {
 
     // Verifica se o jogo já existe; se não, insere pela primeira vez.
     // A API retorna id numérico — armazenamos como string.
-    async garantirJogoExiste(jogoId: string, api: any): Promise<void> {
+    async garantirJogoExiste(jogoId: string, api: any): Promise<{ isNovoJogo: boolean }> {
         const existente = await this.prisma.jogos.findUnique({
             where: { id: jogoId },
             select: { id: true },
         });
 
-        if (existente) return; // Jogo já cadastrado, nada a fazer
+        if (existente) return { isNovoJogo: false };
 
         this.logger.info(
-            { jogo_id: jogoId },
-            `Novo jogo detectado: ${api['time-casa']} vs ${api['time-visitante']}`,
+            { jogoId, timeCasa: api['time-casa'], timeVisitante: api['time-visitante'] },
+            `🆕 Cadastrando novo jogo: ${api['time-casa']} vs ${api['time-visitante']} (${api['liga']})`,
         );
 
         // Mapeamento direto das chaves da API (com hífens) para os campos do banco

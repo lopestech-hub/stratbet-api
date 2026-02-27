@@ -66,19 +66,23 @@ export class ColetorService {
         dadosJogo: any,
         idsAtivos: Set<string>,
     ): Promise<void> {
-        const jogoId = String(dadosJogo.id); // API retorna id como número
+        const jogoId = String(dadosJogo.id);
         const tempoAtual = dadosJogo['tempo'] as number;
+        const timeCasa = dadosJogo['time-casa'];
+        const timeVisitante = dadosJogo['time-visitante'];
+        const placar = `${dadosJogo['placar-casa']}x${dadosJogo['placar-visitante']}`;
 
         idsAtivos.add(jogoId);
 
-        // Garante que o jogo existe na tabela jogos (insere se for a primeira vez)
-        await this.jogosService.garantirJogoExiste(jogoId, dadosJogo);
+        // Garante que o jogo existe na tabela jogos
+        const { isNovoJogo } = await this.jogosService.garantirJogoExiste(jogoId, dadosJogo);
+        if (isNovoJogo) {
+            this.logger.info({ jogoId, timeCasa, timeVisitante }, `🆕 Novo jogo detectado: ${timeCasa} vs ${timeVisitante}`);
+        }
 
-        // Recupera o estado atual em memória deste jogo
+        // Recupera o estado atual em memória
         let estado = this.estadoJogos.get(jogoId);
 
-        // Se o estado não existe na memória (ex: após restart do servidor),
-        // recupera o último snapshot salvo no banco para evitar duplicatas
         if (!estado) {
             estado = await this.recuperarEstadoDoBanco(jogoId);
         }
@@ -86,30 +90,39 @@ export class ColetorService {
         // Detecta o período e decide se deve salvar
         const decisao = this.decidirSalvamento(tempoAtual, estado);
 
-        if (!decisao.deveSalvar) {
-            this.logger.debug(
-                { jogo_id: jogoId, tempo: tempoAtual },
-                `Snapshot ignorado: minuto ${tempoAtual} já registrado`,
-            );
-            return;
-        }
+        this.logger.debug(
+            {
+                jogoId,
+                confronto: `${timeCasa} vs ${timeVisitante}`,
+                placar,
+                tempo: tempoAtual,
+                motivo: decisao.motivo
+            },
+            `Analisando jogo: ${timeCasa} [${placar}] ${tempoAtual}'`
+        );
 
+        if (!decisao.deveSalvar) return;
+
+        // Log detalhado do salvamento
+        const acao = decisao.motivo === 'atualizacao_minuto' ? '🔄 Atualizando' : '💾 Salvando novo';
         this.logger.info(
             {
                 jogo_id: jogoId,
+                confronto: `${timeCasa} vs ${timeVisitante}`,
+                placar,
                 tempo: tempoAtual,
                 periodo: decisao.periodo,
                 motivo: decisao.motivo,
             },
-            `Salvando snapshot: ${jogoId} | ${decisao.periodo}T | ${tempoAtual}'`,
+            `${acao} snapshot: ${timeCasa} vs ${timeVisitante} | ${decisao.periodo}T | ${tempoAtual}' [${placar}]`,
         );
 
-        // Salva o snapshot passando o objeto flat completo da API
+        // Salva o snapshot
         await this.snapshotsService.salvarSnapshot({
             jogo_id: jogoId,
             periodo: decisao.periodo,
             tempo: tempoAtual,
-            dados: dadosJogo, // Objeto flat — o serviço extrai os campos com as chaves corretas
+            dados: dadosJogo,
         });
 
         // Atualiza o estado em memória
@@ -147,8 +160,8 @@ export class ColetorService {
             };
         }
 
-        // Minuto idêntico ao último salvo → ignorar
-        return { deveSalvar: false, periodo: estado.ultimo_periodo, motivo: 'duplicado' };
+        // Minuto idêntico ao último salvo → Autoriza salvamento para atualização (Upsert)
+        return { deveSalvar: true, periodo: estado.ultimo_periodo, motivo: 'atualizacao_minuto' };
     }
 
     // Recupera o estado do banco caso o servidor tenha reiniciado (estado em memória perdido)
@@ -180,11 +193,22 @@ export class ColetorService {
     }
 
     // Remove do mapa em memória os jogos que não aparecem mais na API (encerrados)
-    private removerJogosEncerrados(idsAtivos: Set<string>): void {
+    private async removerJogosEncerrados(idsAtivos: Set<string>): Promise<void> {
         for (const [jogoId] of this.estadoJogos) {
             if (!idsAtivos.has(jogoId)) {
+                // Remove da memória
                 this.estadoJogos.delete(jogoId);
-                this.logger.info({ jogo_id: jogoId }, 'Jogo encerrado — removido do estado');
+
+                // Marca como FINALIZADO no banco de dados
+                try {
+                    await this.prisma.jogos.update({
+                        where: { id: jogoId },
+                        data: { status: 'FINALIZADO' }
+                    });
+                    this.logger.info({ jogo_id: jogoId }, '🏁 Jogo encerrado — status atualizado para FINALIZADO');
+                } catch (erro) {
+                    this.logger.error({ erro, jogo_id: jogoId }, 'Erro ao marcar jogo como FINALIZADO');
+                }
             }
         }
     }

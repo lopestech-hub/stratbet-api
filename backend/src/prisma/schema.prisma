@@ -21,6 +21,7 @@ datasource db {
 // =============================================================
 model jogos {
   id String @id @default(uuid())
+  status String @default("AO_VIVO") // "AO_VIVO", "FINALIZADO", "SUSPENSO"
 
   // --- Dados de Identificação e Links ---
   link_betfair  String? // Link para o mercado na Betfair
@@ -310,5 +311,6 @@ model snapshots {
   @@index([jogo_id])
   @@index([jogo_id, periodo, tempo]) // Busca rápida do último estado do jogo
   @@index([capturado_em])
+  @@unique([jogo_id, periodo, tempo]) // Garante um snapshot único por minuto/período
   @@map("snapshots")
 }
