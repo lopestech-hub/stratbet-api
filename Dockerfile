@@ -11,6 +11,11 @@ WORKDIR /app/backend
 # Copia apenas os arquivos de dependência primeiro (cache layer)
 COPY backend/package*.json ./
 
+# Configura NPM para ser mais resiliente a falhas de rede
+RUN npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000
+
 # Forçamos NODE_ENV=development para instalar devDependencies (como @nestjs/cli)
 RUN NODE_ENV=development npm ci
 
